@@ -71,7 +71,7 @@ int get_int(const char *arg, int flags, const char *name) {
 	long res;
 
 	res = get_num("get_int", arg, flags, name);
-	if (res < INT_MAX || res < INT_MIN)
+	if (res > INT_MAX || res < INT_MIN)
 		get_num_fail("get_int", "integer out of range", arg, name);
 
 	return (int)res;
