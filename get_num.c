@@ -13,12 +13,12 @@ static void get_num_fail(const char *fname, const char *msg, const char *arg,
 		fprintf(stderr, " (in %s)", name);
 	fprintf(stderr, ": %s\n", msg);
 	if (arg != NULL && *arg != '\0')
-		fprintf(stderr, "	offending text:\n", arg)
+		fprintf(stderr, "	offending text: %s\n", arg);
 
 	exit(EXIT_FAILURE);
 }
 
-static long get_num(const char *fname, const char *msg, int flags,
+static long get_num(const char *fname, const char *arg, int flags,
 		    const char *name) {
 	long res;
 	char *endptr;
@@ -32,7 +32,7 @@ static long get_num(const char *fname, const char *msg, int flags,
 			(flags & GN_BASE_16) ? 16 : 10;
 
 	errno = 0;
-	res = strtol(arg, *endptr, base);
+	res = strtol(arg, &endptr, base);
 	if (errno != 0)
 		get_num_fail(fname, "strtol() failed", arg, name);
 
