@@ -14,6 +14,8 @@ static char *ename[] = {
 
 #define MAX_ENAME (sizeof(ename) / sizeof(ename[0])) - 1
 
+/* prevent 'gcc -Wall' complaining if we call this function as
+   last statement in a non-void function */
 #ifdef __GNUC__
 __attribute__((__noreturn__))
 #endif
@@ -32,6 +34,11 @@ static void terminate(bool use_exit3) {
 		_exit(EXIT_FAILURE);
 }
 
+/*
+ * outputing a string containing the error name(if available in 'ename' array)
+ * corresponding to the value in 'err', along with the corresponding error
+ * message from strerror(), and outputting the caller-supplied error message
+ * specified in 'format' and 'op'. */
 static void output_error(bool use_err, int err, bool flush_stdout,
 			const char *format, va_list ap) {
 #define BUF_SIZE 500
@@ -49,11 +56,14 @@ static void output_error(bool use_err, int err, bool flush_stdout,
 	snprintf(buf, BUF_SIZE,  "ERROR%s: %s\n", err_text, user_msg);
 
 	if (flush_stdout)
-		fflush(stdout);
+		fflush(stdout);	/* flush any pending stdout */
 	fputs(buf, stderr);
-	fflush(stderr);
+	fflush(stderr);		/* in case stderr is not line-buffered */
 }
 
+/*
+ * display error message including 'errno' diagnostic and return to caller.
+ */
 void err_msg(const char *format, ...) {
 	va_list arg_list;
 	int saved_errno;
@@ -67,6 +77,9 @@ void err_msg(const char *format, ...) {
 	errno = saved_errno;
 }
 
+/*
+ * display error message including 'errno' diagnostic and terminate the process.
+ */
 void err_exit(const char *format, ...) {
 	va_list arg_list;
 
@@ -77,6 +90,20 @@ void err_exit(const char *format, ...) {
 	terminate(true);
 }
 
+/*
+ * display error message including 'errno' diagnostic and terminate the process
+ * by calling _exit().
+
+ * The relationship between this function and err_exit() is analogous to that between
+ * _exit(2) and exit(3): unlike err_exit(), this function does not flush stdout and
+ * calls _exit(2) to terminate the process(rather than exit(2), which would cause exit
+ * handlers to be invoked).
+ *
+ * These differences make this function specially useful in a library function that
+ * creates a child process that must then terminate because of an error: the child must
+ * terminate without flushing stdio buffers that were partially filled by the caller
+ * and without invoking exit handlers that were established by the caller.
+ */
 void err__exit(const char *format, ...) {
 	va_list arg_list;
 
@@ -87,6 +114,9 @@ void err__exit(const char *format, ...) {
 	terminate(false);
 }
 
+/* The following function does the same as err_exit(), but expects
+ * the error number in `errnum`.
+ */
 void err_exit_en(int errnum, const char *format, ...) {
 	va_list arg_list;
 
@@ -97,6 +127,8 @@ void err_exit_en(int errnum, const char *format, ...) {
 	terminate(true);
 }
 
+/* print an error message(without an `errno` diagnostic)
+ */
 void fatal(const char *format, ...) {
 	va_list arg_list;
 
@@ -107,6 +139,7 @@ void fatal(const char *format, ...) {
 	terminate(true);
 }
 
+/* print a command usage error message and terminate the process */
 void usage_error(const char *format, ...) {
 	va_list arg_list;
 
@@ -119,6 +152,8 @@ void usage_error(const char *format, ...) {
 	fflush(stderr);		/* in case stderr is not line-buffered */
 	exit(EXIT_FAILURE);
 }
+
+/* diagnose an error in command-line arguments and terminate the process */
 void cmd_line_error(const char *format, ...) {
 	va_list arg_list;
 
